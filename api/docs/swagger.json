@@ -1,0 +1,53 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Realtime API of the Irish public transit network",
+        "title": "WheresMyLift",
+        "contact": {
+            "name": "Conor Mc Govern",
+            "email": "wheresmylift(at)mcgov(dot)ie"
+        },
+        "license": {
+            "name": "BSD-3-Clause",
+            "url": "https://github.com/mcgovman/wheresmylift/blob/main/LICENSE.md"
+        }
+    },
+    "basePath": "/",
+    "paths": {
+        "/": {
+            "get": {
+                "tags": [
+                    "Root"
+                ],
+                "summary": "Redirect to swagger docs",
+                "responses": {
+                    "307": {
+                        "description": "Temporary Redirect",
+                        "headers": {
+                            "Location": {
+                                "type": "string",
+                                "description": "docs/index.html"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v0/healthcheck": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V0"
+                ],
+                "summary": "Get health of API",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/mcgovman/wheresmylift/api/cmd"
+	"github.com/mcgovman/wheresmylift/api/docs"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -22,22 +24,48 @@ func init() {
 	log.Logger = log.
 		With().Caller().Logger().
 		With().Str("version", Version).Logger()
+	docs.SwaggerInfo.Version = Version
 }
 
+// @title			WheresMyLift
+// @description	Realtime API of the Irish public transit network
+// @contact.name	Conor Mc Govern
+// @contact.email	wheresmylift(at)mcgov(dot)ie
+// @license.name	BSD-3-Clause
+// @license.url	https://github.com/mcgovman/wheresmylift/blob/main/LICENSE.md
+// @BasePath		/
 func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
 
-	var configFilePath string
+	go func() {
+		<-sigs
+		cmd.Stop()
+		os.Exit(0)
+	}()
+
+	defer func() {
+		if err := recover(); err != nil {
+			log.Log().Err(fmt.Errorf("%v", err)).Msg("server panic")
+			sigs <- syscall.SIGTERM
+
+			return
+		}
+	}()
 
 	if len(os.Args) > 1 {
-		configFilePath = os.Args[1]
-	}
+		if os.Args[1] == "-v" {
+			fmt.Println(Version)
 
-	if _, err := os.Stat(configFilePath); errors.Is(err, os.ErrNotExist) && configFilePath != "" {
-		log.Fatal().Err(err).Msg("specified config file does not exist")
-	}
+			return
+		} else if _, err := os.Stat(os.Args[1]); errors.Is(err, os.ErrNotExist) {
+			log.Error().Err(err).Msg("specified config file does not exist")
 
-	cmd.Run(sigs, filepath.Dir(configFilePath))
-	<-sigs
+			return
+		}
+
+		cmd.Start(filepath.Dir(os.Args[1]))
+	} else {
+		cmd.Start("")
+	}
 }

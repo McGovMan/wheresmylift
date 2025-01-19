@@ -62,12 +62,29 @@ func TestSetupRouter(t *testing.T) {
 		w := httptest.NewRecorder()
 		ctx := gin.CreateTestContextOnly(w, r)
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/", nil)
-		req.Header.Set("context-id", "388240b8-2826-435a-9556-03f6da0c8894")
+		assert.NoError(t, err, "could not create http request")
+		uuidV7, err := uuid.NewV7()
+		assert.NoError(t, err, "could not create uuid")
+		req.Header.Set("context-id", uuidV7.String())
+		r.GET("/", func(c *gin.Context) {})
+
+		r.ServeHTTP(w, req)
+		assert.Equal(t, uuidV7.String(), ctx.Writer.Header().Get("context-id"), "existing context id should be included")
+	})
+
+	t.Run("should generate a new context id if included context id is old", func(t *testing.T) {
+		r := SetupRouter()
+		w := httptest.NewRecorder()
+		ctx := gin.CreateTestContextOnly(w, r)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/", nil)
+		req.Header.Set("context-id", "01947a95-1cc7-7a16-b2b2-c1314071976d")
 		assert.NoError(t, err, "could not create http request")
 		r.GET("/", func(c *gin.Context) {})
 
 		r.ServeHTTP(w, req)
-		assert.Equal(t, "388240b8-2826-435a-9556-03f6da0c8894", ctx.Writer.Header().Get("context-id"), "existing context id should be included")
+		_, contextIdErr := uuid.Parse(ctx.Writer.Header().Get("context-id"))
+		assert.NoError(t, contextIdErr, "context id should be a valid uuid")
+		assert.NotEqual(t, "01947a95-1cc7-7a16-b2b2-c1314071976d", ctx.Writer.Header().Get("context-id"), "existing context id should not be included")
 	})
 
 	t.Run("should log the method, path, response status, latency_ns, request_info, and context id", func(t *testing.T) {

@@ -11,6 +11,23 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+func newOrExistingUUIDv7(uuidStr string) uuid.UUID {
+	contextId, err := uuid.Parse(uuidStr)
+	// Unlikely to error - seems like it only would when it runs out of unique uuids
+	uuidV7, _ := uuid.NewV7()
+	if err != nil || contextId.Version() != 7 {
+		return uuidV7
+	}
+
+	sec, nsec := contextId.Time().UnixTime()
+	timeSinceCreation := time.Since(time.Unix(sec, nsec).UTC())
+	if timeSinceCreation > 5*time.Minute || timeSinceCreation < time.Since(time.Now()) {
+		return uuidV7
+	}
+
+	return contextId
+}
+
 func SetupRouter() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -23,12 +40,10 @@ func SetupRouter() *gin.Engine {
 	r.Use(func(ctx *gin.Context) {
 		start := time.Now()
 
-		contextId, err := uuid.Parse(ctx.Request.Header.Get("context-id"))
-		if err != nil || contextId == uuid.Nil {
-			ctx.Writer.Header().Set("context-id", uuid.New().String())
-		} else {
-			ctx.Writer.Header().Set("context-id", contextId.String())
-		}
+		ctx.Writer.Header().Set(
+			"context-id",
+			newOrExistingUUIDv7(ctx.Request.Header.Get("context-id")).String(),
+		)
 
 		requestLog := log.
 			With().Str("ip", ctx.ClientIP()).Logger().
@@ -41,8 +56,6 @@ func SetupRouter() *gin.Engine {
 		requestLog = requestLog.With().Int64("latency_ns", time.Since(start).Nanoseconds()).Logger().
 			With().Int("status", ctx.Writer.Status()).Logger()
 		requestLog.Info().Msg("request_info")
-
-		ctx.Next()
 	})
 
 	return r
