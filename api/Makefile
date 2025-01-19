@@ -11,13 +11,18 @@ coverage:
 coverage-total:
 	go tool cover -func cover.out | grep total | grep -Eo '[0-9]+\.[0-9]+'
 
-build:
-ifneq "$(untracked_files_length)" "0"
-	@echo "All files should be commited before building"
-	exit 1
-endif
-
-	go build -ldflags "-X github.com/mcgovman/wheresmylift/api.Version=$(current_branch)"
-
 lint:
 	golangci-lint run -v
+
+generate-swagger:
+	go get . || true
+	go install github.com/swaggo/swag/cmd/swag@v1.16.4
+	swag init --dir ".,internal/server,internal/helpers"
+
+verify-swagger:
+	# Using /bin/cp as cp seems to be aliased and is losing flags on the way
+	/bin/cp -Rf docs /tmp/docs_branch
+	cmp --silent docs/docs.go /tmp/docs_branch/docs.go || (echo "Swagger CLI was not ran" && exit 1)
+	cmp --silent docs/swagger.json /tmp/docs_branch/swagger.json || (echo "Swagger CLI was not ran" && exit 1)
+	cmp --silent docs/swagger.yaml /tmp/docs_branch/swagger.yaml || (echo "Swagger CLI was not ran" && exit 1)
+	echo "Swagger has been verified successfully"

@@ -1,0 +1,46 @@
+---
+- hosts: "{{ env }}"
+  tasks:
+    - name: (Re)create maintenance page container
+      community.docker.docker_container:
+        name: WML-API-maintenance-page
+        state: present
+        recreate: true
+        image: nginx:mainline
+        restart_policy: unless-stopped
+        labels:
+          traefik.enable: "true"
+          traefik.http.routers.WML-API-maintenance-page.priority: "1"
+          traefik.http.services.WML-API-maintenance-page.loadbalancer.server.port: "80"
+          traefik.http.routers.WML-API-maintenance-page.rule: "Host(`{{ endpoint }}`)"
+          traefik.http.routers.WML-API-maintenance-page.entrypoints: "websecure"
+          traefik.http.routers.WML-API-maintenance-page.tls: "true"
+          traefik.http.routers.WML-API-maintenance-page.tls.certresolver: "myresolver"
+        networks:
+          - name: transit-public
+        healthcheck:
+          test: ["CMD", "curl", "-I", "-s", "http://localhost", "|", "grep", "'503 Service Temporarily Unavailable'", "&&", "exit", "0"]
+          timeout: 1s
+          retries: 3
+          interval: 5s
+    - name: Copy nginx.conf to container
+      community.docker.docker_container_copy_into:
+        container: WML-API-maintenance-page
+        content: |
+          events {}
+          http {
+              server {
+                  location / {
+                      default_type application/json;
+                      return 503 '{"message":"service unavailable"}';
+                  }
+              }
+          }
+        container_path: /etc/nginx/nginx.conf
+        owner_id: 0
+        group_id: 0
+        mode: "0644"
+    - name: (Re)start maintenance page container
+      community.docker.docker_container:
+        name: WML-API-maintenance-page
+        state: healthy

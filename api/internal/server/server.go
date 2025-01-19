@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/mcgovman/wheresmylift/api/internal/config"
 	"github.com/rs/cors"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Server struct {
@@ -42,9 +43,9 @@ func NewServer(config config.Config) *Server {
 		HTTP:   httpSrv,
 	}
 
-	r.GET("", func(c *gin.Context) {
-		c.Status(204)
-	})
+	r.GET("", s.RootGet)
+	r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("v0/healthcheck", s.V0HealthCheckGet)
 
 	return s
 }

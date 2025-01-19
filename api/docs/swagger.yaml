@@ -1,0 +1,34 @@
+basePath: /
+info:
+  contact:
+    email: wheresmylift(at)mcgov(dot)ie
+    name: Conor Mc Govern
+  description: Realtime API of the Irish public transit network
+  license:
+    name: BSD-3-Clause
+    url: https://github.com/mcgovman/wheresmylift/blob/main/LICENSE.md
+  title: WheresMyLift
+paths:
+  /:
+    get:
+      responses:
+        "307":
+          description: Temporary Redirect
+          headers:
+            Location:
+              description: docs/index.html
+              type: string
+      summary: Redirect to swagger docs
+      tags:
+      - Root
+  /v0/healthcheck:
+    get:
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      summary: Get health of API
+      tags:
+      - V0
+swagger: "2.0"
