@@ -6,15 +6,14 @@ import (
 	"math/big"
 	"net"
 	"os"
-	"os/signal"
 	"path"
-	"syscall"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/mcgovman/wheresmylift/api/internal/config"
 	"github.com/mcgovman/wheresmylift/api/test-utils"
+	"github.com/nsf/jsondiff"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -48,10 +47,9 @@ func validConfig() config.Config {
 var assertionStepTimeout time.Duration = 10 * time.Second
 var assertionPollInterval time.Duration = 100 * time.Millisecond
 
-func TestRun(t *testing.T) {
-	t.Run("cmd will start and stop on signal", func(t *testing.T) {
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+func TestStart(t *testing.T) {
+	t.Run("cmd will start", func(t *testing.T) {
+		Srv = nil
 		cfg := validConfig()
 		cfgYaml, err := yaml.Marshal(cfg)
 		assert.NoError(t, err, "could not marshall config")
@@ -66,12 +64,8 @@ func TestRun(t *testing.T) {
 		logSink := test.LogSink{}
 		log.Logger = zerolog.New(&logSink)
 
-		defer func() {
-			sigs <- syscall.SIGTERM
-		}()
-
 		go func() {
-			Run(sigs, dir)
+			Start(dir)
 		}()
 
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
@@ -82,6 +76,7 @@ func TestRun(t *testing.T) {
 						"config":  cfg,
 						"message": "got config",
 					},
+					jsondiff.FullMatch,
 				),
 				"could not find config log",
 			)
@@ -94,83 +89,16 @@ func TestRun(t *testing.T) {
 						"level":   "info",
 						"message": "starting server",
 					},
+					jsondiff.FullMatch,
 				),
 				"could not find server starting log",
 			)
 		}, assertionStepTimeout, assertionPollInterval)
 		assert.Len(t, logSink.Logs, 2, "expected length of logs")
-
-		logSink.Reset()
-		cfg.HTTP.ListenAddress = randomAddr()
-		cfgYaml, err = yaml.Marshal(cfg)
-		assert.NoError(t, err, "could not marshal config into yaml")
-		err = os.WriteFile(cfgPath, cfgYaml, 0600)
-		assert.NoError(t, err, "could not write config to file")
-
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(
-				c,
-				logSink.ContainsLog(
-					map[string]interface{}{
-						"file":    path.Join(dir, "api.yml"),
-						"message": "config changed - reloading",
-					},
-				),
-				"could not find config change log",
-			)
-		}, assertionStepTimeout, assertionPollInterval)
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(
-				c,
-				logSink.ContainsLog(
-					map[string]interface{}{
-						"message": "stopping server",
-					},
-				),
-				"could not find stopping server log",
-			)
-		}, assertionStepTimeout, assertionPollInterval)
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(
-				c,
-				logSink.ContainsLog(
-					map[string]interface{}{
-						"message": "stopped server successfully",
-					},
-				),
-				"could not find stopped server successfully log",
-			)
-		}, assertionStepTimeout, assertionPollInterval)
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(
-				c,
-				logSink.ContainsLog(
-					map[string]interface{}{
-						"config":  cfg,
-						"message": "got config",
-					},
-				),
-				"could not find reloaded config log",
-			)
-		}, assertionStepTimeout, assertionPollInterval)
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(
-				c,
-				logSink.ContainsLog(
-					map[string]interface{}{
-						"level":   "info",
-						"message": "starting server",
-					},
-				),
-				"could not find starting server log",
-			)
-		}, assertionStepTimeout, assertionPollInterval)
-		assert.Len(t, logSink.Logs, 5, "expected length of logs")
 	})
 
 	t.Run("cmd will fail with an invalid config", func(t *testing.T) {
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+		Srv = nil
 		dir, err := os.MkdirTemp("", uuid.New().String())
 		defer os.RemoveAll(dir)
 		assert.NoError(t, err, "could not create temp dir")
@@ -181,12 +109,8 @@ func TestRun(t *testing.T) {
 		err = os.WriteFile(path.Join(dir, "api.yml"), cfgYaml, 0600)
 		assert.NoError(t, err, "could not write config to file")
 
-		defer func() {
-			sigs <- syscall.SIGTERM
-		}()
-
 		go func() {
-			Run(sigs, dir)
+			Start(dir)
 		}()
 
 		logSink := test.LogSink{}
@@ -202,39 +126,24 @@ func TestRun(t *testing.T) {
 						},
 						"message": "configuration issues",
 					},
+					jsondiff.FullMatch,
 				),
 				"could not find config issues log",
 			)
 		}, assertionStepTimeout, assertionPollInterval)
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(
-				c,
-				logSink.ContainsLog(
-					map[string]interface{}{
-						"message": "stopped server successfully",
-					},
-				),
-				"could not find stopped server log",
-			)
-		}, assertionStepTimeout, assertionPollInterval)
-		assert.GreaterOrEqual(t, len(logSink.Logs), 2, "expected length of logs")
+		assert.Len(t, logSink.Logs, 1, "expected length of logs")
 	})
 
 	t.Run("cmd will fail with an invalid yaml file", func(t *testing.T) {
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+		Srv = nil
 		dir, err := os.MkdirTemp("", uuid.New().String())
 		defer os.RemoveAll(dir)
 		assert.NoError(t, err, "could not create temp dir")
 		err = os.WriteFile(path.Join(dir, "api.yml"), []byte("a"), 0600)
 		assert.NoError(t, err, "could not write config to file")
 
-		defer func() {
-			sigs <- syscall.SIGTERM
-		}()
-
 		go func() {
-			Run(sigs, dir)
+			Start(dir)
 		}()
 
 		logSink := test.LogSink{}
@@ -248,27 +157,16 @@ func TestRun(t *testing.T) {
 						"level":   "error",
 						"message": "failed to read configuration",
 					},
+					jsondiff.FullMatch,
 				),
 				"could not find failed start server log",
 			)
 		}, assertionStepTimeout, assertionPollInterval)
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(
-				c,
-				logSink.ContainsLog(
-					map[string]interface{}{
-						"message": "stopped server successfully",
-					},
-				),
-				"could not find stopped server log",
-			)
-		}, assertionStepTimeout, assertionPollInterval)
-		assert.GreaterOrEqual(t, len(logSink.Logs), 2, "expected length of logs")
+		assert.Len(t, logSink.Logs, 1, "expected length of logs")
 	})
 
 	t.Run("cmd will fail to start the server on an already used port", func(t *testing.T) {
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+		Srv = nil
 		cfg := validConfig()
 		cfgYaml, err := yaml.Marshal(cfg)
 		assert.NoError(t, err, "could not marshal config into yaml")
@@ -285,12 +183,8 @@ func TestRun(t *testing.T) {
 		assert.NoError(t, err, "could not create listener")
 		defer l.Close()
 
-		defer func() {
-			sigs <- syscall.SIGTERM
-		}()
-
 		go func() {
-			Run(sigs, dir)
+			Start(dir)
 		}()
 
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
@@ -302,9 +196,95 @@ func TestRun(t *testing.T) {
 						"error":   fmt.Sprintf("failed to start HTTP server: listen tcp %s: bind: address already in use", cfg.HTTP.ListenAddress),
 						"message": "Failed to start server",
 					},
+					jsondiff.FullMatch,
 				),
 				"could not find server start failed log",
 			)
 		}, assertionStepTimeout, assertionPollInterval)
+	})
+}
+
+func TestStop(t *testing.T) {
+	t.Run("will stop the server", func(t *testing.T) {
+		Srv = nil
+		cfg := validConfig()
+		cfgYaml, err := yaml.Marshal(cfg)
+		assert.NoError(t, err, "could not marshal config into yaml")
+		dir, err := os.MkdirTemp("", uuid.New().String())
+		defer os.RemoveAll(dir)
+		assert.NoError(t, err, "could not create temp dir")
+		err = os.WriteFile(path.Join(dir, "api.yml"), cfgYaml, 0600)
+		assert.NoError(t, err, "could not write config to file")
+
+		logSink := test.LogSink{}
+		log.Logger = zerolog.New(&logSink)
+
+		go func() {
+			Start(dir)
+		}()
+
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(
+				c,
+				logSink.ContainsLog(
+					map[string]interface{}{
+						"level":   "info",
+						"message": "starting server",
+					},
+					jsondiff.FullMatch,
+				),
+				"could not find server starting log",
+			)
+		}, assertionStepTimeout, assertionPollInterval)
+		assert.Len(t, logSink.Logs, 2, "expected length of logs")
+
+		Stop()
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(
+				c,
+				logSink.ContainsLog(
+					map[string]interface{}{
+						"message": "stopping server",
+					},
+					jsondiff.FullMatch,
+				),
+				"could not find stopping server log",
+			)
+		}, assertionStepTimeout, assertionPollInterval)
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(
+				c,
+				logSink.ContainsLog(
+					map[string]interface{}{
+						"message": "stopped server successfully",
+					},
+					jsondiff.FullMatch,
+				),
+				"could not find stopped server successfully log",
+			)
+		}, assertionStepTimeout, assertionPollInterval)
+		assert.Len(t, logSink.Logs, 4, "expected length of logs")
+	})
+
+	t.Run("will stop the server when its not running", func(t *testing.T) {
+		Srv = nil
+		logSink := test.LogSink{}
+		log.Logger = zerolog.New(&logSink)
+
+		Stop()
+
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(
+				c,
+				logSink.ContainsLog(
+					map[string]interface{}{
+						"message": "stopped server successfully",
+					},
+					jsondiff.FullMatch,
+				),
+				"could not find stopped server successfully log",
+			)
+		}, assertionStepTimeout, assertionPollInterval)
+		assert.Len(t, logSink.Logs, 1, "expected length of logs")
 	})
 }

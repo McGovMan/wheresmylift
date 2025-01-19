@@ -22,7 +22,7 @@ func (l *LogSink) Reset() {
 	l.Logs = []string{}
 }
 
-func (l *LogSink) ContainsLog(expectedLog map[string]interface{}) bool {
+func (l *LogSink) ContainsLog(expectedLog map[string]interface{}, diffType jsondiff.Difference) bool {
 	opts := jsondiff.DefaultJSONOptions()
 	expectedLogString, err := json.Marshal(expectedLog)
 	if err != nil {
@@ -31,7 +31,7 @@ func (l *LogSink) ContainsLog(expectedLog map[string]interface{}) bool {
 
 	for _, log := range l.Logs {
 		diff, _ := jsondiff.Compare([]byte(log), expectedLogString, &opts)
-		if diff == jsondiff.FullMatch {
+		if diff == diffType {
 			return true
 		}
 	}
