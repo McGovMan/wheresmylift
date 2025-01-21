@@ -5,10 +5,10 @@ on:
     outputs:
       api:
         description: "changes to api"
-        value: ${{ jobs.changes.outputs.changes.api }}
+        value: ${{ jobs.changes.outputs.api }}
       web-ui:
         description: "changes to web-ui"
-        value: ${{ jobs.changes.outputs.changes.web-ui }}
+        value: ${{ jobs.changes.outputs.web-ui }}
 
 jobs:
   changes:
