@@ -30,7 +30,10 @@ jobs:
     timeout-minutes: 1
     steps:
       - name: Run coverage & print coverage total
-        run: make -C api coverage
+        run: |
+          pwd
+          ls -lah
+          make -C api coverage
   api-swagger:
     needs: call-setup-api-workspace
     runs-on: ubuntu-latest
