@@ -43,9 +43,6 @@ const docTemplate = `{
         },
         "/v0/healthcheck": {
             "get": {
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "V0"
                 ],

@@ -1,0 +1,29 @@
+name: Setup Workspace
+
+on:
+  workflow_call:
+    outputs:
+      api:
+        description: "changes to api"
+        value: ${{ jobs.changes.outputs.changes.api }}
+      web-ui:
+        description: "changes to web-ui"
+        value: ${{ jobs.changes.outputs.changes.web-ui }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.changes.outputs.api }}
+      web-ui: ${{ steps.changes.outputs.web-ui }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          api:
+            - 'api/**'
+          web-ui:
+            - 'web-ui/**'
+  

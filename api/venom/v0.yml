@@ -1,0 +1,12 @@
+name: V0 Route
+
+testcases:
+
+- name: GET V0 Healthcheck
+  steps:
+  - type: http
+    method: GET
+    url: "{{.url}}/v0/healthcheck"
+    timeout: 5
+    assertions:
+    - result.statuscode ShouldEqual 204
