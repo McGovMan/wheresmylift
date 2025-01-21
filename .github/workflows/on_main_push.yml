@@ -1,0 +1,38 @@
+name: Update unstable services
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  changes:
+    uses: ./.github/workflows/reusable_changes.yml
+
+  call-setup-api-workspace:
+    needs: changes
+    if: ${{ needs.changes.outputs.api == 'true' }}
+    uses: ./.github/workflows/reusable_setup_workspace.yml
+  call-build-publish-api:
+    needs: [call-setup-api-workspace]
+    uses: ./.github/workflows/reusable_build_publish.yml
+    with:
+      image_names: |
+        piongain/wheresmylift-api:unstable
+      dir: api
+    secrets: inherit
+  api-deploy:
+    needs: [call-build-publish-api]
+    uses: ./.github/workflows/reusable_api_deploy.yml
+    with:
+      image_name: piongain/wheresmylift-api:unstable
+      endpoint: dev.api.wheresmylift.ie
+    secrets: inherit
+  api-venom:
+    needs: [api-deploy]
+    runs-on: ubuntu-latest
+    env:
+      ENDPOINT: https://dev.api.wheresmylift.ie
+    steps:
+      - name: Run venom tests
+        run: make -C api venom
