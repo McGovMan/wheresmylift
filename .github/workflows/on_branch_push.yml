@@ -1,0 +1,97 @@
+name: Update branch services
+
+on:
+  push:
+    branches:
+      - '**'
+      - '!main'
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.changes.outputs.api }}
+      web-ui: ${{ steps.changes.outputs.web-ui }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          api:
+            - 'api/**'
+          web-ui:
+            - 'web-ui/**'
+  branch:
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.branch.outputs.branch }}
+    steps:
+      - name: Git branch name
+        id: branch_name
+        shell: bash
+        run: |
+          echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/} | sed -r 's/\//-/g')"
+
+  setup-api-workspace:
+    needs: changes
+    if: ${{ needs.changes.outputs.api == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          # Fetch all commits
+          fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.23.4'
+      - name: Install dependencies
+        run: |
+          cd api
+          go get . || true
+          go install github.com/swaggo/swag/cmd/swag@v1.16.4
+          curl https://github.com/ovh/venom/releases/download/v1.2.0/venom.linux-amd64 -L -o /usr/local/bin/venom
+          chmod +x /usr/local/bin/venom
+  api-unit-tests:
+    needs: setup-api-workspace
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Run coverage & print coverage total
+        run: |
+          pwd
+          ls -lah
+          make -C api coverage
+  api-swagger:
+    needs: setup-api-workspace
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Verify swagger has been updated
+        run: make -C api verify-swagger
+  call-build-publish-api:
+    needs: [api-unit-tests, api-swagger, branch]
+    uses: ./.github/workflows/reusable_build_publish.yml
+    with:
+      image_names: |
+        piongain/wheresmylift-api:${{ needs.branch.outputs.branch }}
+      dir: api
+    secrets: inherit
+  api-deploy:
+    needs: [call-build-publish-api, branch]
+    uses: ./.github/workflows/reusable_api_deploy.yml
+    with:
+      image_name: piongain/wheresmylift-api:${{ needs.branch.outputs.branch }}
+      endpoint: ${{ needs.branch.outputs.branch }}.dev.api.wheresmylift.ie
+    secrets: inherit
+  api-venom:
+    needs: [api-deploy, branch]
+    runs-on: ubuntu-latest
+    env:
+      ENDPOINT: https://${{ needs.branch.outputs.branch }}.dev.api.wheresmylift.ie
+    steps:
+      - name: Run venom tests
+        run: make -C api venom

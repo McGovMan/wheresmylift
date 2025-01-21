@@ -29,7 +29,9 @@ Having this maintenance page should help diagnose when the service is simply una
 
 ## Testing
 
-Run `make test` to ensure all tests pass. Run `make coverage` and `make coverage-total` to ensure adaquete code coverage. `main.go` and `internal/test-utils/*` are except from coverage scanning and do not have any tests.
+Run `make units` to ensure all tests pass. Run `make coverage` to ensure adaquete code coverage. `main.go` and `internal/test-utils/*` are except from coverage scanning and do not have any tests.
+
+Run `make e2e` to ensure all end-to-end tests pass. Optionally you can specify the the endpoint to test against an environment `make ENDPOINT="https://api.wheresmylift.ie" e2e`.
 
 You can use `make lint` to ensure your changes conform to the code standards.
 
