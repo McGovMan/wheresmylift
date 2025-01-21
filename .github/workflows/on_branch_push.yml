@@ -8,7 +8,20 @@ on:
 
 jobs:
   changes:
-    uses: ./.github/workflows/reusable_changes.yml
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.changes.outputs.api }}
+      web-ui: ${{ steps.changes.outputs.web-ui }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          api:
+            - 'api/**'
+          web-ui:
+            - 'web-ui/**'
   branch:
     runs-on: ubuntu-latest
     outputs:
@@ -20,12 +33,30 @@ jobs:
         run: |
           echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/} | sed -r 's/\//-/g')"
 
-  call-setup-api-workspace:
+  setup-api-workspace:
     needs: changes
     if: ${{ needs.changes.outputs.api == 'true' }}
-    uses: ./.github/workflows/reusable_setup_workspace.yml
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          # Fetch all commits
+          fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.23.4'
+      - name: Install dependencies
+        run: |
+          cd api
+          go get . || true
+          go install github.com/swaggo/swag/cmd/swag@v1.16.4
+          curl https://github.com/ovh/venom/releases/download/v1.2.0/venom.linux-amd64 -L -o /usr/local/bin/venom
+          chmod +x /usr/local/bin/venom
   api-unit-tests:
-    needs: call-setup-api-workspace
+    needs: setup-api-workspace
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
@@ -35,7 +66,7 @@ jobs:
           ls -lah
           make -C api coverage
   api-swagger:
-    needs: call-setup-api-workspace
+    needs: setup-api-workspace
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
