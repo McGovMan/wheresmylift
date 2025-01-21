@@ -1,0 +1,33 @@
+name: Create and publish docker images
+
+inputs:
+  image_names:
+    description: "Provide all image names that you wish to publish the image under"
+    required: true
+    type: string
+  dir:
+    description: "Provide the Dockerfile directory"
+    required: true
+    type: string
+secrets:
+  DOCKER_REGISTRY_USERNAME:
+    description: "Provide the username of the account that has access to publish to the registry"
+    required: true
+  DOCKER_REGISTRY_PASSWORD:
+    description: "Provide the password for the account that has access to publish to the registry"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Login to DockerHub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Build and push branch
+      uses: docker/build-push-action@v6
+      with:
+        context: "{{defaultContext}}:${{ inputs.dir }}"
+        push: true
+        tags: ${{ inputs.image_names }}

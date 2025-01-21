@@ -1,0 +1,29 @@
+name: Run deploy
+
+inputs:
+  endpoint:
+    description: "Endpoint at which you expect the API to be accessible"
+    required: true
+    type: string
+  image_name:
+    type: string
+    description: "Provide the docker image tag"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Run ansible deploy
+      uses: dawidd6/action-ansible-playbook@v2
+      with:
+        playbook: deploy.yml
+        directory: api/ansible
+        key: ${{secrets.SSH_PRIVATE_KEY}}
+        inventory: |
+          [wheresmylift.ie]
+          wheresmylift.ie
+        options: |
+          -e "{ env: wheresmylift.ie }"
+          -e "{ image_name: piongain/wheresmylift-api:{{ inputs.image_name }} }"
+          -e "{ endpoint: {{ inputs.endpoint }} }"
+  
