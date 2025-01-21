@@ -54,7 +54,8 @@ func SetupRouter() *gin.Engine {
 		ctx.Next()
 
 		requestLog = requestLog.With().Int64("latency_ns", time.Since(start).Nanoseconds()).Logger().
-			With().Int("status", ctx.Writer.Status()).Logger()
+			With().Int("status", ctx.Writer.Status()).Logger().
+			With().Str("test", "test").Logger()
 		requestLog.Info().Msg("request_info")
 	})
 
