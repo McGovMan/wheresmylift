@@ -23,8 +23,6 @@ paths:
       - Root
   /v0/healthcheck:
     get:
-      produces:
-      - application/json
       responses:
         "204":
           description: No Content
