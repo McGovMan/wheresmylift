@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mcgovman/wheresmylift/api/internal/config"
+	"github.com/mcgovman/wheresmylift/packages/api/internal/config"
 	"github.com/rs/cors"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"

@@ -11,7 +11,7 @@ jobs:
     with:
       image_names: |
         piongain/wheresmylift-api:unstable
-      dir: api
+      dir: packages/api
     secrets: inherit
   api-deploy:
     needs: [call-build-publish-api]
@@ -28,4 +28,4 @@ jobs:
     steps:
       - uses: ./.github/workflows/actions/setup_workspace.yml
       - name: Run venom tests
-        run: make -C api venom
+        run: make e2e

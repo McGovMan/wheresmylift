@@ -2,8 +2,6 @@ current_branch := $(shell git branch --show-current)-$(shell git rev-parse --sho
 untracked_files := $(shell git ls-files . --exclude-standard --others)
 untracked_files_length := $(shell echo -n '$(untracked_files)' | wc -c)
 
-ENDPOINT ?= "http://localhost:8080"
-
 units:
 	go test -timeout 10s -p 1 -v -count=1 -failfast ./...
 
@@ -13,9 +11,6 @@ coverage:
 
 lint:
 	golangci-lint run -v
-
-e2e:
-	venom run --var url='${ENDPOINT}' venom/*.yml --output-dir test_results
 
 generate-swagger:
 	rm -R docs || true

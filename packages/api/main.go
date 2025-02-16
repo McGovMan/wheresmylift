@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/mcgovman/wheresmylift/api/cmd"
-	"github.com/mcgovman/wheresmylift/api/docs"
+	"github.com/mcgovman/wheresmylift/packages/api/cmd"
+	"github.com/mcgovman/wheresmylift/packages/api/docs"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

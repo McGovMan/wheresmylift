@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	h "github.com/mcgovman/wheresmylift/api/internal/helpers"
+	h "github.com/mcgovman/wheresmylift/packages/api/internal/helpers"
 	"github.com/rs/zerolog/log"
 )
 

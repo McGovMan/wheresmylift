@@ -3,8 +3,8 @@ package cmd
 import (
 	"context"
 
-	"github.com/mcgovman/wheresmylift/api/internal/config"
-	"github.com/mcgovman/wheresmylift/api/internal/server"
+	"github.com/mcgovman/wheresmylift/packages/api/internal/config"
+	"github.com/mcgovman/wheresmylift/packages/api/internal/server"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"

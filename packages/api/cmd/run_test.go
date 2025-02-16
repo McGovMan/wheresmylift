@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mcgovman/wheresmylift/api/internal/config"
-	"github.com/mcgovman/wheresmylift/api/test-utils"
+	"github.com/mcgovman/wheresmylift/lib/go-test-utils"
+	"github.com/mcgovman/wheresmylift/packages/api/internal/config"
 	"github.com/nsf/jsondiff"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

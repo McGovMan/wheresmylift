@@ -19,9 +19,11 @@ jobs:
       with:
         filters: |
           api:
-            - 'api/**'
+            - 'packages/api/**'
           web-ui:
-            - 'web-ui/**'
+            - 'packages/web-ui/**'
+          aggregator:
+            - 'packages/aggregator/**'
   branch:
     runs-on: ubuntu-latest
     outputs:
@@ -43,7 +45,7 @@ jobs:
         run: |
           pwd
           ls -lah
-          make -C api coverage
+          make -C packages/api coverage
   api-swagger:
     needs: setup-api-workspace
     runs-on: ubuntu-latest
@@ -51,14 +53,14 @@ jobs:
     steps:
       - uses: ./.github/workflows/actions/setup_workspace.yml
       - name: Verify swagger has been updated
-        run: make -C api verify-swagger
+        run: make -C packages/api verify-swagger
   call-build-publish-api:
     needs: [api-unit-tests, api-swagger, branch]
     uses: ./.github/workflows/actions/build_publish.yml
     with:
       image_names: |
         piongain/wheresmylift-api:${{ needs.branch.outputs.branch }}
-      dir: api
+      dir: packages/api
     secrets: inherit
   api-deploy:
     needs: [call-build-publish-api, branch]
@@ -67,7 +69,7 @@ jobs:
       image_name: piongain/wheresmylift-api:${{ needs.branch.outputs.branch }}
       endpoint: ${{ needs.branch.outputs.branch }}.dev.api.wheresmylift.ie
     secrets: inherit
-  api-venom:
+  venom:
     needs: [api-deploy, branch]
     runs-on: ubuntu-latest
     env:
@@ -75,4 +77,4 @@ jobs:
     steps:
       - uses: ./.github/workflows/actions/setup_workspace.yml
       - name: Run venom tests
-        run: make -C api venom
+        run: make e2e

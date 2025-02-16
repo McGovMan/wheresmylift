@@ -6,11 +6,19 @@ The project aims to consolodate all Irish public transport operators that provid
 
 ### API
 
-Source is located in [api](api). Information on this package can be found in the README under that directory.
+Source is located in [packages/api](packages/api). Information on this package can be found in the README under that directory.
 
 ### Web-UI
 
-Source is located in [web-ui](web-ui). Information on this package can be found in the README under that directory.
+Source is located in [packages/web-ui](packages/web-ui). Information on this package can be found in the README under that directory.
+
+### Aggregator
+
+Source is located in [packages/aggregator](packages/aggregator/). Information on this package can be found in the README under that directory
+
+## Testing
+
+Lower level testing is covered in each packages but end-to-end testing can be done by running `make e2e` in the root directory of this repo. This script will ensure all end-to-end tests pass. Optionally, you can specify the endpoint to test against an envrionment `make ENDPOINT="https://api.wheresmylift.ie" e2e`.
 
 ## Contributing
 
