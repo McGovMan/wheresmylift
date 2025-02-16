@@ -43,6 +43,7 @@ const docTemplate = `{
         },
         "/v0/healthcheck": {
             "get": {
+                "description": "If accessing this endpoint via Cloudflare it will only accessible using the BetterStack user-agent https://betterstack.com/docs/uptime/frequently-asked-questions/#what-user-agent-does-uptime-use",
                 "tags": [
                     "V0"
                 ],

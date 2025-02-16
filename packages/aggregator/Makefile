@@ -7,7 +7,13 @@ units:
 
 coverage:
 	go test -timeout 10s -p 1 -v -cover -count=1 -failfast $(shell go list ./... | grep -v -E 'aggregator$$') -coverprofile cover.out
-	go tool cover -func cover.out | grep total | grep -Eo '[0-9]+\.[0-9]+'
+	TOTAL_COVERAGE=$(shell go tool cover -func cover.out | grep total | grep -Eo '[0-9]+\.[0-9]+'); \
+	if [[ $$(echo "$$TOTAL_COVERAGE" | awk '{print ($$1 == $(COVERAGE_THRESHOLD))}') ]]; then \
+		echo "Code coverage adequate"; \
+	else \
+		echo "Code coverage is below threshold. Please add more unit tests."; \
+		exit 1; \
+	fi
 
 lint:
 	golangci-lint run -v

@@ -11,6 +11,12 @@ It relies on the following environment variables being set: WML_LOG_LEVEL, WML_H
   - WML_HTTP_LISTEN_ADDRESS must be in the form [IP]:port, where IP is optional
   - WML_HTTP_TRUSTED_PROXY must be an IP
 
+If accessing this service via Cloudflare, only the provided endpoints will be accessible; any other requests will be blocked by Cloudflare.
+
+It also makes use of Cloudflare's caching feature for all endpoints. Since these endpoint responses will change when new data has been retrieved, there is no advantage to Cloudflare requesting the origin for any updates.
+
+Cloudflare will respond with the `Age` and `Expiry` headers which will specify hold old the resource is in seconds and when the resource should be revalidated/refetched respectively. Cloudflare's cache will usually only cache the response for a few seconds for realtime data at this services request; other static assets (such as swagger) may be cached for longer. If the `Age` header is missing, or the `CF-Cache-Status` header is `EXPIRED` then the resource has been fetched directly from the origin, this is nothing to worry about. Any response missing the `Expiry` header should not be polled as this data is considered static.
+
 ### Maintenance Page
 
 The goal of the maintenance page is to run in parallel with the API on the same domain and respond with a `503 Service Temporarily Unavailable` status code and `{"message":"service unavailable"}` json responce when the API is unavailable or in an unhealthy state. This is achieved by setting the maintenance page traefik router priority to be lower than the API traefik router.

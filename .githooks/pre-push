@@ -4,23 +4,24 @@
 # cp git-hooks/pre-push .git/hooks/pre-push; chmod 700 .git/hooks/pre-push
 # @author : Mak Sophea (Extended By Conor Mc Govern)
 # @version : 1.0
-#
 
-# get the path to this script file
-DIR=$(dirname "$0")
-COVERAGE_THRESHOLD=100.0
-
-cd api
+cd packages/api
 
 ## Run coverage report
 make coverage
-TOTAL_COVERAGE=$(make coverage-total)
-if [[ $(echo "$TOTAL_COVERAGE $COVERAGE_THRESHOLD" | awk '{print ($1 > $2)}') ]]; then
-    echo "Code coverage adequate"
-else
-    echo "Code coverage is below threshold. Please add more unit tests."
+
+## Run linter
+make lint
+if [[ $? != 0 ]]; then
+    echo -e "\e[31m> linter did not successfully pass\e[0m"
+    echo -e "> address linting failures and attempt to push again"
     exit 1
 fi
+
+cd packages/aggregator
+
+## Run coverage report
+make coverage
 
 ## Run linter
 make lint
