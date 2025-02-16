@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -53,19 +52,11 @@ func main() {
 		}
 	}()
 
-	if len(os.Args) > 1 {
-		if os.Args[1] == "-v" {
-			fmt.Println(Version)
+	if len(os.Args) > 1 && os.Args[1] == "-v" {
+		fmt.Println(Version)
 
-			return
-		} else if _, err := os.Stat(os.Args[1]); errors.Is(err, os.ErrNotExist) {
-			log.Error().Err(err).Msg("specified config file does not exist")
-
-			return
-		}
-
-		cmd.Start(filepath.Dir(os.Args[1]))
-	} else {
-		cmd.Start("")
+		return
 	}
+
+	cmd.Start()
 }

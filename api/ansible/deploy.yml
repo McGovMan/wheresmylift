@@ -13,9 +13,13 @@
         recreate: true
         image: piongain/wheresmylift-api:{{ image_name }}
         restart_policy: unless-stopped
+        environment:
+          - WML_LOG_LEVEL={{ logLevel }}
+          - WML_HTTP_LISTEN_ADDRESS={{ httpListenAddress }}
+          - WML_HTTP_TRUSTED_PROXY={{ httpTrustedProxy }}
         labels:
           traefik.enable: "true"
-          traefik.http.services.api-wheresmylift-ie.loadbalancer.server.port: "80"
+          traefik.http.services.api-wheresmylift-ie.loadbalancer.server.port: "{{ httpListenAddress }}"
           traefik.http.routers.api-wheresmylift-ie.priority: "2"
           traefik.http.routers.api-wheresmylift-ie.rule: "Host(`{{ endpoint }}`)"
           traefik.http.routers.api-wheresmylift-ie.entrypoints: "websecure"
@@ -24,28 +28,10 @@
         networks:
           - name: transit-public
         healthcheck:
-          test: ["CMD", "curl", "--fail", "http://localhost/v0/healthcheck"]
+          test: ["CMD", "curl", "--fail", "http://localhost{{ httpListenAddress }}/v0/healthcheck"]
           timeout: 1s
           retries: 3
           interval: 5s
-    - name: Copy api.yml to container
-      community.docker.docker_container_copy_into:
-        container: WML-API-{{ image_name }}
-        content: |
-          log_level: debug
-          timeouts:
-            startup: 30s
-            shutdown: 30s
-            read_header: 2s
-          http:
-            listen_address: :80
-            cors:
-              allowed_origins:
-              - '*'
-        container_path: /run/api.yml
-        owner_id: 0
-        group_id: 0
-        mode: "0644"
     - name: (Re)start WML-API-{{ image_name }} container
       community.docker.docker_container:
         name: WML-API-{{ image_name }}

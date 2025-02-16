@@ -26,7 +26,7 @@ func TestStart(t *testing.T) {
 	t.Run("should use the ip in the X-Real-IP when the trusted proxy is set", func(t *testing.T) {
 		cfg := config.Config{
 			HTTP: config.HTTP{
-				TrustedProxies: []string{RemoteAddr},
+				TrustedProxy: RemoteAddr,
 			},
 		}
 		srv := NewServer(cfg)
@@ -145,7 +145,7 @@ func TestStop(t *testing.T) {
 		}()
 
 		go func() {
-			srv.HTTP.ListenAndServe()
+			_ = srv.HTTP.ListenAndServe()
 		}()
 
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {

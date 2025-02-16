@@ -6,20 +6,10 @@
 
 This API currently only presents one endpoint: `/v0/healthcheck`.
 
-It relies upon a file called `api.yml` being either in the `/run` or in this directory. Here is a sample:
-
-```
-log_level: debug
-timeouts:
-  startup: 30s
-  shutdown: 30s
-  read_header: 2s
-http:
-  listen_address: :8080
-  cors:
-    allowed_origins:
-    - '*'
-```
+It relies on the following environment variables being set: WML_LOG_LEVEL, WML_HTTP_LISTEN_ADDRESS, WML_HTTP_TRUSTED_PROXY.
+  - WML_LOG_LEVEL can be any of the strings named in [`config.go`](internal/config/config.go)
+  - WML_HTTP_LISTEN_ADDRESS must be in the form [IP]:port, where IP is optional
+  - WML_HTTP_TRUSTED_PROXY must be an IP
 
 ### Maintenance Page
 

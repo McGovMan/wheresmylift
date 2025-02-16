@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/mcgovman/wheresmylift/api/internal/config"
 	"github.com/rs/cors"
@@ -19,7 +20,7 @@ type Server struct {
 
 func NewServer(config config.Config) *Server {
 	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins: config.HTTP.CORS.AllowedOrigins,
+		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{
 			http.MethodGet,
 			http.MethodOptions,
@@ -27,15 +28,15 @@ func NewServer(config config.Config) *Server {
 	})
 
 	r := SetupRouter()
-	if config.HTTP.TrustedProxies != nil {
+	if config.HTTP.TrustedProxy != "" {
 		// The config verifies the IPs are valid
-		_ = r.SetTrustedProxies(config.HTTP.TrustedProxies)
+		_ = r.SetTrustedProxies([]string{config.HTTP.TrustedProxy})
 	}
 
 	httpSrv := &http.Server{
 		Addr:              config.HTTP.ListenAddress,
 		Handler:           corsMiddleware.Handler(r),
-		ReadHeaderTimeout: config.Timeouts.ReadHeader,
+		ReadHeaderTimeout: 100 * time.Millisecond,
 	}
 
 	s := &Server{

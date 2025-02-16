@@ -21,7 +21,7 @@ func TestRootGet(t *testing.T) {
 		engine.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusTemporaryRedirect, w.Code, "expected status 307 from endpoint")
-		assert.Equal(t, "/docs/index.html", w.HeaderMap.Get("Location"), "unexcepted or missing redirect")
+		assert.Equal(t, "/docs/index.html", w.Result().Header.Get("Location"), "unexcepted or missing redirect")
 	})
 }
 

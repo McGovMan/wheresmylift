@@ -5,19 +5,15 @@ import (
 	"fmt"
 	"math/big"
 	"net"
-	"os"
-	"path"
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/mcgovman/wheresmylift/api/internal/config"
 	"github.com/mcgovman/wheresmylift/api/test-utils"
 	"github.com/nsf/jsondiff"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v3"
 )
 
 func randomAddr() string {
@@ -29,17 +25,9 @@ func randomAddr() string {
 func validConfig() config.Config {
 	return config.Config{
 		LogLevel: "debug",
-		Timeouts: config.Timeouts{
-			Shutdown:   30 * time.Second,
-			Startup:    30 * time.Second,
-			ReadHeader: 2 * time.Second,
-		},
 		HTTP: config.HTTP{
 			ListenAddress: randomAddr(),
-			CORS: config.CORS{
-				AllowedOrigins: []string{"*"},
-			},
-			TrustedProxies: []string{"10.0.0.2"},
+			TrustedProxy:  "10.0.0.2",
 		},
 	}
 }
@@ -51,21 +39,15 @@ func TestStart(t *testing.T) {
 	t.Run("cmd will start", func(t *testing.T) {
 		Srv = nil
 		cfg := validConfig()
-		cfgYaml, err := yaml.Marshal(cfg)
-		assert.NoError(t, err, "could not marshall config")
-		dir, err := os.MkdirTemp("", uuid.New().String())
-		assert.NoError(t, err, "could not create temp dir")
-		defer os.RemoveAll(dir)
-		assert.NoError(t, err, "could not marshal config into yaml")
-		cfgPath := path.Join(dir, "api.yml")
-		err = os.WriteFile(cfgPath, cfgYaml, 0600)
-		assert.NoError(t, err, "could not write config to file")
+		t.Setenv("WML_LOG_LEVEL", cfg.LogLevel)
+		t.Setenv("WML_HTTP_LISTEN_ADDRESS", cfg.HTTP.ListenAddress)
+		t.Setenv("WML_HTTP_TRUSTED_PROXY", cfg.HTTP.TrustedProxy)
 
 		logSink := test.LogSink{}
 		log.Logger = zerolog.New(&logSink)
 
 		go func() {
-			Start(dir)
+			Start()
 		}()
 
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
@@ -99,18 +81,14 @@ func TestStart(t *testing.T) {
 
 	t.Run("cmd will fail with an invalid config", func(t *testing.T) {
 		Srv = nil
-		dir, err := os.MkdirTemp("", uuid.New().String())
-		defer os.RemoveAll(dir)
-		assert.NoError(t, err, "could not create temp dir")
 		cfg := validConfig()
 		cfg.LogLevel = "some random level"
-		cfgYaml, err := yaml.Marshal(cfg)
-		assert.NoError(t, err, "could not marshall config")
-		err = os.WriteFile(path.Join(dir, "api.yml"), cfgYaml, 0600)
-		assert.NoError(t, err, "could not write config to file")
+		t.Setenv("WML_LOG_LEVEL", cfg.LogLevel)
+		t.Setenv("WML_HTTP_LISTEN_ADDRESS", cfg.HTTP.ListenAddress)
+		t.Setenv("WML_HTTP_TRUSTED_PROXY", cfg.HTTP.TrustedProxy)
 
 		go func() {
-			Start(dir)
+			Start()
 		}()
 
 		logSink := test.LogSink{}
@@ -134,47 +112,12 @@ func TestStart(t *testing.T) {
 		assert.Len(t, logSink.Logs, 1, "expected length of logs")
 	})
 
-	t.Run("cmd will fail with an invalid yaml file", func(t *testing.T) {
-		Srv = nil
-		dir, err := os.MkdirTemp("", uuid.New().String())
-		defer os.RemoveAll(dir)
-		assert.NoError(t, err, "could not create temp dir")
-		err = os.WriteFile(path.Join(dir, "api.yml"), []byte("a"), 0600)
-		assert.NoError(t, err, "could not write config to file")
-
-		go func() {
-			Start(dir)
-		}()
-
-		logSink := test.LogSink{}
-		log.Logger = zerolog.New(&logSink)
-
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(
-				c,
-				logSink.ContainsLog(
-					map[string]interface{}{
-						"level":   "error",
-						"message": "failed to read configuration",
-					},
-					jsondiff.FullMatch,
-				),
-				"could not find failed start server log",
-			)
-		}, assertionStepTimeout, assertionPollInterval)
-		assert.Len(t, logSink.Logs, 1, "expected length of logs")
-	})
-
 	t.Run("cmd will fail to start the server on an already used port", func(t *testing.T) {
 		Srv = nil
 		cfg := validConfig()
-		cfgYaml, err := yaml.Marshal(cfg)
-		assert.NoError(t, err, "could not marshal config into yaml")
-		dir, err := os.MkdirTemp("", uuid.New().String())
-		defer os.RemoveAll(dir)
-		assert.NoError(t, err, "could not create temp dir")
-		err = os.WriteFile(path.Join(dir, "api.yml"), cfgYaml, 0600)
-		assert.NoError(t, err, "could not write config to file")
+		t.Setenv("WML_LOG_LEVEL", cfg.LogLevel)
+		t.Setenv("WML_HTTP_LISTEN_ADDRESS", cfg.HTTP.ListenAddress)
+		t.Setenv("WML_HTTP_TRUSTED_PROXY", cfg.HTTP.TrustedProxy)
 
 		logSink := test.LogSink{}
 		log.Logger = zerolog.New(&logSink)
@@ -184,7 +127,7 @@ func TestStart(t *testing.T) {
 		defer l.Close()
 
 		go func() {
-			Start(dir)
+			Start()
 		}()
 
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
@@ -208,19 +151,15 @@ func TestStop(t *testing.T) {
 	t.Run("will stop the server", func(t *testing.T) {
 		Srv = nil
 		cfg := validConfig()
-		cfgYaml, err := yaml.Marshal(cfg)
-		assert.NoError(t, err, "could not marshal config into yaml")
-		dir, err := os.MkdirTemp("", uuid.New().String())
-		defer os.RemoveAll(dir)
-		assert.NoError(t, err, "could not create temp dir")
-		err = os.WriteFile(path.Join(dir, "api.yml"), cfgYaml, 0600)
-		assert.NoError(t, err, "could not write config to file")
+		t.Setenv("WML_LOG_LEVEL", cfg.LogLevel)
+		t.Setenv("WML_HTTP_LISTEN_ADDRESS", cfg.HTTP.ListenAddress)
+		t.Setenv("WML_HTTP_TRUSTED_PROXY", cfg.HTTP.TrustedProxy)
 
 		logSink := test.LogSink{}
 		log.Logger = zerolog.New(&logSink)
 
 		go func() {
-			Start(dir)
+			Start()
 		}()
 
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {

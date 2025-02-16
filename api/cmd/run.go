@@ -12,25 +12,22 @@ import (
 
 var Srv *server.Server
 
-func Start(configDir string) {
-	viper.SetConfigType("yml")
-	viper.SetConfigName("api")
-	viper.AddConfigPath("/run")
-	viper.AddConfigPath(".")
-	if configDir != "" {
-		viper.AddConfigPath(configDir)
+func Start() {
+	viper.SetEnvPrefix("WML")
+	viper.AutomaticEnv()
+
+	logLevel := viper.GetString("LOG_LEVEL")
+	httpListenAddr := viper.GetString("HTTP_LISTEN_ADDRESS")
+	httpTrustedProxy := viper.GetString("HTTP_TRUSTED_PROXY")
+
+	cfg := config.Config{
+		LogLevel: logLevel,
+		HTTP: config.HTTP{
+			ListenAddress: httpListenAddr,
+			TrustedProxy:  httpTrustedProxy,
+		},
 	}
 
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Error().Msg("failed to read configuration")
-
-		return
-	}
-
-	var cfg config.Config
-	// This will only error if you don't pass it a pointer
-	_ = viper.Unmarshal(&cfg)
 	issues := cfg.Verify()
 	if len(issues) != 0 {
 		log.Log().Strs("config_issues", issues).Msg("configuration issues")
@@ -40,8 +37,8 @@ func Start(configDir string) {
 
 	log.Log().Any("config", cfg).Msg("got config")
 
-	logLevel := cfg.GetZeroLogLevel()
-	zerolog.SetGlobalLevel(logLevel)
+	zerologLevel := cfg.GetZeroLogLevel()
+	zerolog.SetGlobalLevel(zerologLevel)
 
 	Srv = server.NewServer(cfg)
 
@@ -56,10 +53,7 @@ func Start(configDir string) {
 func Stop() {
 	if Srv != nil {
 		log.Log().Msg("stopping server")
-
-		ctx, cancel := context.WithTimeout(context.Background(), Srv.Config.Timeouts.Shutdown)
-		defer cancel()
-		Srv.Stop(ctx)
+		Srv.Stop(context.Background())
 	}
 
 	log.Log().Msg("stopped server successfully")
